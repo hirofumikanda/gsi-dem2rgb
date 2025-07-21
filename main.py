@@ -1,12 +1,19 @@
 from PIL import Image
 import requests
 import os
-import mercantile
+import csv
+from collections import namedtuple
 
-def get_tiles_japan(z):
-    # 日本全域の緯度経度
-    bounds = (123.0, 20.0, 154.0, 46.0)
-    return list(mercantile.tiles(*bounds, zooms=[z]))
+Tile = namedtuple("Tile", ["z", "x", "y"])
+
+def read_target_tiles(csv_path="target.csv"):
+    tiles = []
+    with open(csv_path, newline="") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            tile = Tile(z=int(row["z"]), x=int(row["x"]), y=int(row["y"]))
+            tiles.append(tile)
+    return tiles
 
 def download_dem_tile(tile, output_root="dem_txt"):
     url = f"https://cyberjapandata.gsi.go.jp/xyz/dem/{tile.z}/{tile.x}/{tile.y}.txt"
@@ -57,10 +64,9 @@ def convert_txt_to_terrain_rgb(txt_path: str, output_root="terrain_rgb"):
 
     img.save(out_path, "PNG")
 
-for z in range(1, 15):
-    tiles = get_tiles_japan(z)
-    for tile in tiles:
-        txt_file = download_dem_tile(tile)
-        if txt_file:
-            print(f"処理中: {txt_file}")
-            convert_txt_to_terrain_rgb(txt_file)
+tiles = read_target_tiles("target.csv")
+for tile in tiles:
+    txt_file = download_dem_tile(tile)
+    if txt_file:
+        print(f"処理中: {txt_file}")
+        convert_txt_to_terrain_rgb(txt_file)
